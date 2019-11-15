@@ -25,22 +25,11 @@
 #
 # include ssl
 #
-# === Authors
-#
-# Frederik Wagner <wagner@wagit.de>
-#
-# === Copyright
-#
-# Copyright 2014 Frederik Wagner
-#
 class ssl (
-  $cert_name = $::fqdn,
-  $directory = '/tmp',
-  $wildcard  = false,
+  Stdlib::Fqdn     $cert_name = $::fqdn,
+  Stdlib::Unixpath $directory = '/tmp',
+  Boolean          $wildcard  = false,
 ) {
-
-  validate_string($cert_name)
-  validate_absolute_path($directory)
 
   $cn_split = split($cert_name,'\.')
   $domain   = join(delete_at($cn_split, 0), '.')
@@ -55,7 +44,7 @@ class ssl (
   $organization  = $cn_split[1]
   $email_address = "root@${domain}"
 
-  if str2bool($wildcard) {
+  if $wildcard {
 
     ssl::self_signed_certificate { $cert_name:
       common_name      => $cert_name,
@@ -76,6 +65,4 @@ class ssl (
       directory     => $directory,
     }
   }
-
-
 }

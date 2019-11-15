@@ -1,12 +1,11 @@
 {
-  "name": "fnerdwq-ssl",
-  "version": "0.0.4",
-  "author": "Frederik Wagner",
+  "name": "efoft-ssl",
+  "author": "efoft",
+  "version": "0.0.5",
   "summary": "Puppet module managning self sigend certs/DH params",
   "license": "Apache License, Version 2.0",
-  "source": "https://github.com/fnerdwq/puppet-ssl.git",
-  "project_page": "https://github.com/fnerdwq/puppet-ssl",
-  "issues_url": "https://github.com/fnerdwq/puppet-ssl/issues",
+  "source": "https://github.com/efoft/puppet-ssl.git",
+  "project_page": "https://github.com/efoft/puppet-ssl",
   "description": "Small SSL certificate handling modules",
   "tags": [
     "ssl",
@@ -51,10 +50,6 @@
     {
       "name": "puppetlabs/stdlib",
       "version_requirement": ">= 3.2.1"
-    },
-    {
-      "name": "fnerdwq/omd",
-      "version_requirement": ">= 0.2.0"
     }
   ]
 }

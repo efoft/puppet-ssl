@@ -69,7 +69,7 @@ Tested on:
 
 * Debian 7
 * Ubuntu 12.04
-* Centos 6.x
+* Centos 7.x
 
 Puppet Version >= 3.4.0, due to specific hiera usage.
 

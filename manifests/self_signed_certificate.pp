@@ -61,120 +61,85 @@
 #   Group of files.
 #   *Optional* (defaults to root)
 #
-# [*check*]
-#   Add certificate validation check for check_mk/OMD.
-#   *Optional* (defaults to false)
-#
-# [*check_warn*]
-#   Seconds to certificate expiry, when to warn.
-#   *Optional* (defaults to undef => default)
-#
-# [*check_crit*]
-#   Seconds to certificate expiry, when critical.
-#   *Optional* (defaults to undef => default)
-#
-#
-# === Examples
-#
-# ssl::self_signed_certificate{ $::fqdn: }
-#
-# === Authors
-#
-# Frederik Wagner <wagner@wagit.de>
-#
-# === Copyright
-#
-# Copyright 2014 Frederik Wagner
-#
 define ssl::self_signed_certificate (
-  $numbits          = '2048',
-  $common_name      = $::fqdn,
-  $email_address    = undef,
-  $country          = undef,
-  $state            = undef,
-  $locality         = undef,
-  $organization     = undef,
-  $unit             = undef,
-  $subject_alt_name = undef,
-  $days             = 365,
-  $directory        = '/etc/ssl',
-  $owner            = root,
-  $group            = root,
-  $check            = false,
-  $check_warn       = undef,
-  $check_crit       = undef,
+  Numeric          $numbits          = 2048,
+  Stdlib::Fqdn     $common_name      = $::fqdn,
+  Optional[String] $email_address    = undef,
+  Optional[String] $country          = undef,
+  Optional[String] $state            = undef,
+  Optional[String] $locality         = undef,
+  Optional[String] $organization     = undef,
+  Optional[String] $unit             = undef,
+  Optional[String] $subject_alt_name = undef,
+  Numeric          $days             = 365,
+  Stdlib::UnixPath $certdir          = '/etc/ssl',
+  Stdlib::UnixPath $keydir           = '/etc/ssl',
+  String           $owner            = root,
+  String           $group            = root,
 ) {
-
-  if ! is_domain_name($common_name) {
-    fail('$common_name must be a domain name!')
-  }
-  validate_string($email_address)
-  validate_re($country,'^(|[a-zA-Z]{2})$')
-  validate_string($state)
-  validate_string($locality)
-  validate_string($organization)
-  validate_string($unit)
-  validate_string($subject_alt_name)
-  validate_re($days,'^\d+$')
-  validate_absolute_path($directory)
-  validate_string($owner)
-  validate_string($group)
-  validate_bool($check)
-  # no need to validet $check_* here
 
   include ssl::install
 
   Exec {
-    path => ['/usr/bin']
+    path => $::path,
   }
 
-  # basename for key and certificate
-  $basename="${directory}/${name}"
+  # Define paths for ssl config, certificate and private key files
+  # ---------------------------------------------------------------------------------------------------
+  $cert = "${certdir}/${name}.crt"
+  $conf = "${certdir}/${name}.cnf"
+  $key  = "${keydir}/${name}.key"
 
-  ensure_resource('file', $directory, { ensure => directory })
 
-  # create configuration file
-  file {"${basename}.cnf":
+  # Create directories (since they can be nested, first run mkdir -p)
+  # ---------------------------------------------------------------------------------------------------
+  ensure_resources('exec', 
+  {
+    "mkdir -p ${certdir}" => { creates => $certdir },
+    "mkdir -p ${keydir}"  => { creates => $keydir  }
+  })
+
+  ensure_resource('file', [$certdir, $keydir],
+  {
+    ensure  => directory,
+    require => Exec["mkdir -p ${certdir}", "mkdir -p ${keydir}"],
+  })
+
+  # Create ssl config file
+  # ---------------------------------------------------------------------------------------------------
+  file { $conf:
     content => template('ssl/cert.cnf.erb'),
     owner   => $owner,
     group   => $group,
-    require => File[$directory],
-    notify  => Exec["create certificate ${name}.crt"],
+    require => File[$certdir, $keydir],
+    notify  => Exec["create certificate ${cert}"],
   }
 
-  # create private key
-  exec {"create private key ${name}.key":
-    command => "openssl genrsa -out ${basename}.key ${numbits}",
-    creates => "${basename}.key",
-    require => File["${basename}.cnf"], # not really need, but for ordering
-    before  => File["${basename}.key"],
-    notify  => Exec["create certificate ${name}.crt"]
+  # Create private key
+  # ---------------------------------------------------------------------------------------------------
+  exec { "create private key ${key}":
+    command => "openssl genrsa -out ${key} ${numbits}",
+    creates => $key,
+    require => File[$conf], # not really need, but for ordering
+    before  => File[$key],
+    notify  => Exec["create certificate ${cert}"]
   }
-  file {"${basename}.key":
+  file { $key:
     mode  => '0600',
     owner => $owner,
     group => $group,
   }
 
-  # create certificate
-  exec {"create certificate ${name}.crt":
-    command     => "openssl req -new -x509 -days ${days} -config ${basename}.cnf -key ${basename}.key -out ${basename}.crt",
+  # Create certificate
+  # ---------------------------------------------------------------------------------------------------
+  exec { "create certificate ${cert}":
+    command     => "openssl req -new -x509 -days ${days} -config ${conf} -key ${key} -out ${cert}",
     refreshonly => true,
-    before      => File["${basename}.crt"],
+    before      => File[$cert],
   }
-  file {"${basename}.crt":
+  file { $cert:
     mode  => '0644',
     owner => $owner,
     group => $group,
   }
-
-  if $check {
-    omd::client::checks::cert {$name:
-      path    => "${basename}.crt",
-      crit    => $check_crit,
-      warn    => $check_warn,
-      require => File["${basename}.crt"],
-    }
-  }
-
 }

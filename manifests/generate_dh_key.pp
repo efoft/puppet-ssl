@@ -28,30 +28,13 @@
 #   Group of files.
 #   *Optional* (defaults to root)
 #
-# === Examples
-#
-# ssl::generate_dh_key{ 'dh_512': }
-#
-# === Authors
-#
-# Frederik Wagner <wagner@wagit.de>
-#
-# === Copyright
-#
-# Copyright 2014 Frederik Wagner
-#
 define ssl::generate_dh_key (
-  $numbits          = '512',
-  $generator        = '2',
-  $directory        = '/etc/ssl',
-  $owner            = root,
-  $group            = root,
+  Numeric          $numbits          = 512,
+  Numeric          $generator        = 2,
+  Stdlib::Unixpath $directory        = '/etc/ssl',
+  String           $owner            = 'root',
+  String           $group            = 'root',
 ) {
-  validate_re($numbits, ['^\d+$'])
-  validate_re($generator, ['^2$','^5$'])
-  validate_absolute_path($directory)
-  validate_string($owner)
-  validate_string($group)
 
   include ssl::install
 
@@ -72,5 +55,4 @@ define ssl::generate_dh_key (
     owner => $owner,
     group => $group,
   }
-
 }
